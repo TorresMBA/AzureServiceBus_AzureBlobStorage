@@ -1,0 +1,32 @@
+name: Deploy SalesCsvApi
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/SalesCsvApi/**'
+      - '.github/workflows/deploy-api.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore
+        run: dotnet restore
+        working-directory: src/SalesCsvApi
+
+      - name: Publish
+        run: dotnet publish -c Release -o publish
+        working-directory: src/SalesCsvApi
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: SaleCsvApi
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_API }}
+          package: src/SalesCsvApi/publish
