@@ -27,6 +27,8 @@ builder.Services.AddSingleton(sp => {
     return client.CreateSender(queue);
 });
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
@@ -62,6 +64,7 @@ app.MapPost("/enqueue-sales-csv", async (HttpRequest req, ServiceBusSender sende
     if(payload.DateFrom.HasValue) message.ApplicationProperties["dateFrom"] = payload.DateFrom.Value.ToString("O");
     if(payload.DateTo.HasValue) message.ApplicationProperties["dateTo"] = payload.DateTo.Value.ToString("O");
     if(!string.IsNullOrWhiteSpace(payload.FileName)) message.ApplicationProperties["fileName"] = payload.FileName;
+    message.ApplicationProperties["isReprocessing"] = payload.IsReprocessing;
 
     // Encolado inmediato o programado (Schedule)
     if(payload.RunAtUtc.HasValue)
@@ -77,5 +80,6 @@ app.MapPost("/enqueue-sales-csv", async (HttpRequest req, ServiceBusSender sende
 })
 .WithName("EnqueueSalesCsv");
 
+app.MapControllers();
 
 app.Run();
