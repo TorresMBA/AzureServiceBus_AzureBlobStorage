@@ -27,18 +27,21 @@ namespace SalesCsvEnqueuerApi.Controllers
             });
         }
 
+        /// <summary>
+        /// Body esperado:
+        ///     {
+        ///        "dateFrom": "2025-11-08T04:00:00Z",
+        ///       "dateTo":   "2025-11-08T04:30:00Z",
+        ///       "fileName": "ventas_turno_noche.csv",
+        ///       "runAtUtc": "2025-11-08T04:35:00Z", // opcional: programa el mensaje
+        ///       "correlationId": "abc-123"          // opcional
+        ///     }
+        /// </summary>
+        /// <param name="payload"></param>
+        /// <returns></returns>
         [HttpPost("enqueue-sales-csv")]
         public async Task<IActionResult> EnqueueSalesAsync(EnqueuePayload payload)
         {
-            // Body esperado:
-            // {
-            //   "dateFrom": "2025-11-08T04:00:00Z",
-            //   "dateTo":   "2025-11-08T04:30:00Z",
-            //   "fileName": "ventas_turno_noche.csv",
-            //   "runAtUtc": "2025-11-08T04:35:00Z", // opcional: programa el mensaje
-            //   "correlationId": "abc-123"          // opcional
-            // }
-
             var strBody = JsonSerializer.Serialize(payload);
 
             // Serializa exactamente el payload que espera el Logic App B / consumidor

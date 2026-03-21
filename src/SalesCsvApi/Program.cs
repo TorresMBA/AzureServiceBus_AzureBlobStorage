@@ -108,7 +108,7 @@ builder.Services.Configure<MySettings>(
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/", () => "Hello World! ESTOY SIENDO DESPLEGADO POR PIPELINES");
 
 app.MapControllers(); //Mapea las rutas de tus controladores
 
