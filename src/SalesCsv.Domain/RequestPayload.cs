@@ -8,10 +8,10 @@ namespace SalesCsv.Domain {
         public Guid JobId { get; set; }
 
         [JsonPropertyName("dateFrom")]
-        public DateTime DateFrom { get; set; }
+        public DateTime? DateFrom { get; set; }
 
         [JsonPropertyName("dateTo")]
-        public DateTime DateTo { get; set; }
+        public DateTime? DateTo { get; set; }
 
         [JsonPropertyName("fileName")]
 

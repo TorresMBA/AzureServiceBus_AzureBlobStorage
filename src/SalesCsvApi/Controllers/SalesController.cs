@@ -38,16 +38,19 @@ namespace SalesCsvApi.Controllers
             });
         }
 
+        /// <summary>
+        ///   // Payload opcional:
+        /// {
+        ///   "dateFrom": "2025-11-08T04:00:00Z",
+        ///   "dateTo":   "2025-11-08T04:30:00Z",
+        ///   "fileName": "ventas_2025-11-08_04-30.csv"
+        /// }
+        /// </summary>
+        /// <param name="req"></param>
+        /// <returns></returns>
         [HttpPost("generate-sales-csv")]
         public async Task<IActionResult> GenerarCsv(RequestPayload req)
-        {
-            // Payload opcional:
-            // {
-            //   "dateFrom": "2025-11-08T04:00:00Z",
-            //   "dateTo":   "2025-11-08T04:30:00Z",
-            //   "fileName": "ventas_2025-11-08_04-30.csv"
-            // }
-
+        {          
             if(req == null)
             {
                 return BadRequest(new { message = "Payload inválido" });
@@ -56,22 +59,9 @@ namespace SalesCsvApi.Controllers
             var nowUtc = DateTime.UtcNow;
             var minutesBack = int.TryParse(_config.GetValue<string>("max-retries"), out var mb) ? mb : 30;
 
-            var dateFrom = req?.DateFrom ?? nowUtc.AddMinutes(-minutesBack);
-            var dateTo = req?.DateTo ?? nowUtc;
+            var dateFrom = req.DateFrom ?? nowUtc.AddMinutes(-minutesBack);
+            var dateTo = req.DateTo ?? nowUtc;
 
-            // 1) Traer datos (SQL de ejemplo)
-            //var connStr = cfg.GetConnectionString("SalesDb") ?? cfg["Sql:ConnectionString"];
-            //IEnumerable<SaleRow> rows;
-            //await using(var conn = new SqlConnection(connStr))
-            //{
-            //    await conn.OpenAsync();
-            //    rows = await conn.QueryAsync<SaleRow>(@"
-            //        SELECT OrderId, CustomerName, Sku, Quantity, UnitPrice, CreatedUtc
-            //        FROM dbo.Sales
-            //        WHERE CreatedUtc >= @From AND CreatedUtc < @To
-            //        ORDER BY CreatedUtc ASC;",
-            //        new { From = dateFrom, To = dateTo });
-            //}
             IEnumerable<SaleRow> rows = new List<SaleRow>
             {
                 new() { OrderId = 1, CustomerName = "Juan Perez", Sku = "PROD001", Quantity = 2, UnitPrice = 15.50m, CreatedUtc = dateFrom.AddMinutes(5) },
@@ -86,7 +76,7 @@ namespace SalesCsvApi.Controllers
             {
                 var total = r.Quantity * r.UnitPrice;
                 // Escapar comas simples (si esperas comas o comillas, agrega el escape requerido)
-                csv.AppendLine($"{req?.JobId.ToString()},{r.OrderId},{Escape(r.CustomerName)},{r.Sku},{r.Quantity},{r.UnitPrice},{total},{r.CreatedUtc:O}");
+                csv.AppendLine($"{req.JobId.ToString()},{r.OrderId},{Escape(r.CustomerName)},{r.Sku},{r.Quantity},{r.UnitPrice},{total},{r.CreatedUtc:O}");
             }
             static string Escape(string? s) => string.IsNullOrEmpty(s) ? "" : s.Replace(",", ";");
 
@@ -102,7 +92,7 @@ namespace SalesCsvApi.Controllers
             var container = blobService.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync();
 
-            var fileName = req?.FileName ?? $"Transactions_{dateFrom:yyyyMMdd_HHmm}-{dateTo:yyyyMMdd_HHmm}.csv";
+            var fileName = req.FileName ?? $"Transactions_{dateFrom:yyyyMMdd_HHmm}-{dateTo:yyyyMMdd_HHmm}.csv";
             if(req.IsReprocessing.HasValue)
             {
                 fileName = req.IsReprocessing.Value ? fileName.Replace(".csv", "_REPROCESSING.csv") : fileName.Replace(".csv", "_ORIGINAL.csv");
