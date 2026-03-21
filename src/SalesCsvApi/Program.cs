@@ -70,10 +70,16 @@ if(!builder.Environment.IsDevelopment())
 {
     string connectionString = builder.Configuration["AppConfig:Endpoint"];
 
+    if(string.IsNullOrEmpty(connectionString))
+    {
+        // Esto saldrá en tus logs de Azure y sabrás exactamente qué falta
+        throw new InvalidOperationException("Falta la variable de entorno 'AppConfig__Endpoint' en Azure App Service.");
+    }
+
     // 1. Cargar Azure App Configuration
     builder.Configuration.AddAzureAppConfiguration(options =>
     {
-        options.Connect(connectionString)
+        options.Connect(new Uri(connectionString), new DefaultAzureCredential())
             // 1. Cargar configuraciones normales
             .Select(KeyFilter.Any, LabelFilter.Null)
             // 2. Cargar configuraciones dinámicas con un "Sentinel" para refresco
