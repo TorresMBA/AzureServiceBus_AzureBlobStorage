@@ -1,0 +1,43 @@
+trigger:
+- main
+
+pool:
+  name: 'Default'
+
+variables:
+  buildConfiguration: 'Release'
+  projectFolder: 'SalesCsvApi'
+
+steps:
+  # 1. Build de toda la solución (opcional, pero asegura que la librería compile)
+  - task: DotNetCoreCLI@2
+    displayName: 'Compilación de la Solución'
+    inputs:
+      command: 'build'
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
+
+  # 2. Publish ESPECÍFICO (Aquí está el truco)
+  - task: DotNetCoreCLI@2
+    displayName: "Publicación del API Específico"
+    inputs:
+      command: 'publish'
+      # IMPORTANTE: Desactivar el escaneo automático
+      publishWebProjects: false 
+      # Apuntar directamente al .csproj que quieres desplegar
+      projects: '**/$(projectFolder)/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+      zipAfterPublish: true
+
+   # 3. Despliegue a Azure   
+  - task: AzureRmWebAppDeployment@5
+    displayName: "Desplegando en Azure App Service"
+    inputs:
+      ConnectionType: 'AzureRM'
+      azureSubscription: 'Azure subscription 1(88cce5f7-6789-49e0-971a-da7a1fc84afe)'
+      appType: 'webAppLinux'
+      WebAppName: 'sales-csv-datalake'
+      # Apuntamos exactamente al zip generado en el paso anterior
+      packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+      RuntimeStack: 'DOTNETCORE|8.0'
+      DeploymentTypeLinux: 'oneDeploy'
