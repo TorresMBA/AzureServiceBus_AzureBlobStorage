@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Abstractions;
 using SalesCsv.Domain;
 using System.Text;
 
@@ -46,6 +47,11 @@ namespace SalesCsvApi.Controllers
             //   "dateTo":   "2025-11-08T04:30:00Z",
             //   "fileName": "ventas_2025-11-08_04-30.csv"
             // }
+
+            if(req == null)
+            {
+                return BadRequest(new { message = "Payload inválido" });
+            }
 
             var nowUtc = DateTime.UtcNow;
             var minutesBack = int.TryParse(_config.GetValue<string>("max-retries"), out var mb) ? mb : 30;
