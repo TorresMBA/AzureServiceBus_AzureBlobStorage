@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Abstractions;
 using SalesCsv.Domain;
+using SalesCsvApi.Helpers;
+using System;
+using System.ComponentModel;
 using System.Text;
 
 namespace SalesCsvApi.Controllers
@@ -56,7 +59,12 @@ namespace SalesCsvApi.Controllers
                 return BadRequest(new { message = "Payload inválido" });
             }
 
-            var nowUtc = DateTime.UtcNow;
+            if(req.JobId == Guid.Empty)
+            {
+                req.JobId = Guid.NewGuid();
+            }
+
+                var nowUtc = DateTime.UtcNow;
             var minutesBack = int.TryParse(_config.GetValue<string>("max-retries"), out var mb) ? mb : 30;
 
             var dateFrom = req.DateFrom ?? nowUtc.AddMinutes(-minutesBack);
@@ -82,17 +90,17 @@ namespace SalesCsvApi.Controllers
 
             // 3) Subir a Blob Storage con Managed Identity
             var containerName = _config.GetValue<string>("Storage:Container") ?? "filescsv";
-            var accountUrl = _config.GetValue<string>("Storage:AccountUrl") ?? ""; // ej: https://<storage>.blob.core.windows.net/
+            var storageConnection = _config.GetValue<string>("Storage:ConnectionString") ?? ""; // ej: https://<storage>.blob.core.windows.net/
             var optionsAzure = new DefaultAzureCredentialOptions()
             {
                 TenantId = "d20a9516-617b-4700-8e7c-cafc939164dc"
             };
             var credential = new DefaultAzureCredential(optionsAzure); // Usa la MI del App Service
-            var blobService = new BlobServiceClient(new Uri(accountUrl), credential);
+            var blobService = new BlobServiceClient(storageConnection);
             var container = blobService.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync();
 
-            var fileName = req.FileName ?? $"Transactions_{dateFrom:yyyyMMdd_HHmm}-{dateTo:yyyyMMdd_HHmm}.csv";
+            var fileName = $"{DateTime.Now:yyyyMMdd_HHmm}_{req.FileName}" ?? $"Transactions_{dateFrom:yyyyMMdd_HHmm}-{dateTo:yyyyMMdd_HHmm}.csv";
             if(req.IsReprocessing.HasValue)
             {
                 fileName = req.IsReprocessing.Value ? fileName.Replace(".csv", "_REPROCESSING.csv") : fileName.Replace(".csv", "_ORIGINAL.csv");
@@ -103,10 +111,12 @@ namespace SalesCsvApi.Controllers
             using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv.ToString()));
             await blob.UploadAsync(ms, overwrite: true);
 
+            var newUri = TokenSAS.GenerarUrlSas(blobService, containerName, fileName);
+
             return Ok(new
             {
                 message = "CSV generado",
-                blob = blob.Uri.ToString(),
+                blob = newUri,
                 from = dateFrom,
                 to = dateTo,
                 rows = rows.Count()
